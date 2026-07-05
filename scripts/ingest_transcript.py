@@ -41,7 +41,7 @@ TRANSCRIPT:
 
 
 def to_text(path: Path) -> str:
-    raw = path.read_text(errors="ignore")
+    raw = path.read_text(encoding="utf-8", errors="ignore")
     if path.suffix == ".json":
         try:
             data = json.loads(raw)
@@ -75,7 +75,8 @@ def to_text(path: Path) -> str:
     return raw
 
 
-def process(path: Path, model: str) -> None:
+def process(path: Path, model: str) -> set[str]:
+    """Ingest one transcript; returns slugs of mentioned projects that already exist."""
     body = to_text(path)[:120_000]
     data = llm.complete_json(SYSTEM, TEMPLATE.format(body=body), model=model)
     date = data.get("date") or datetime.now().strftime("%Y-%m-%d")
@@ -103,6 +104,9 @@ def process(path: Path, model: str) -> None:
     RAW.mkdir(parents=True, exist_ok=True)
     path.rename(RAW / path.name)
     print(f"  ✓ {date}-{slug}.md")
+    # a meeting mention alone must NOT create a project — only refresh existing ones
+    return {s for s in (vault.slugify(p) for p in data.get("projects", []))
+            if (vault.VAULT / "02-projects" / s / "_project.md").exists()}
 
 
 def main() -> None:
@@ -113,12 +117,19 @@ def main() -> None:
     if not files:
         print("No new transcripts.")
         return
+    touched: set[str] = set()
+    processed = 0
     for p in sorted(files):
         print(f"Processing {p.name} …")
         try:
-            process(p, model)
+            touched |= process(p, model)
+            processed += 1
         except Exception as e:  # noqa: BLE001
             print(f"  ! failed: {e}")
+    if processed:  # digest invariant (§6)
+        for slug in sorted(touched):
+            vault.refresh_digest(slug)
+        vault.regenerate_dashboard()
 
 
 if __name__ == "__main__":

@@ -2,14 +2,14 @@
 """Weekly Linear sync.
 
 Pulls issues you're assigned to or subscribed to that changed since the last run,
-writes one note per issue under 02-projects/<project>/tasks/, and refreshes a
-status rollup in each project's _project.md.
+writes one note per issue under 02-projects/<project>/tasks/, logs completed
+issues to the project's done.md, and refreshes each touched project's digest
+plus DASHBOARD.md (§6).
 
 Env:  LINEAR_API_KEY   (Settings > API > Personal API key)
 """
 from __future__ import annotations
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -56,7 +56,7 @@ def gql(key: str, query: str, variables: dict | None = None) -> dict:
     return data["data"]
 
 
-def issue_note(issue: dict) -> None:
+def issue_note(issue: dict) -> str:
     project = issue.get("project") or {}
     project_name = project.get("name") or "No Project"
     pslug = vault.slugify(project_name)
@@ -76,25 +76,14 @@ def issue_note(issue: dict) -> None:
     }
     body = (issue.get("description") or "_No description._").strip()
     vault.write_note(tasks_dir / f"{issue['identifier']}.md", meta, body)
-    # completed work gets logged as documentation
+    # completed work gets logged as documentation (§8: completed -> done.md)
     if (issue.get("state") or {}).get("type") == "completed":
         vault.append_section(
-            vault.VAULT / "02-projects" / pslug / "_project.md",
+            vault.VAULT / "02-projects" / pslug / "done.md",
             "Completed",
             [f"- [[tasks/{issue['identifier']}|{issue['identifier']}]] {issue['title']}"],
         )
-
-
-def ensure_project_note(project_name: str) -> None:
-    pslug = vault.slugify(project_name)
-    path = vault.VAULT / "02-projects" / pslug / "_project.md"
-    if not path.exists():
-        vault.write_note(
-            path,
-            {"type": "project", "name": project_name, "status": "active",
-             "created": datetime.now(timezone.utc).strftime("%Y-%m-%d")},
-            f"# {project_name}\n\nOverview of the project, its goal, and links.\n",
-        )
+    return pslug
 
 
 def main() -> None:
@@ -105,14 +94,15 @@ def main() -> None:
     print(f"Linear viewer: {viewer['name']}")
 
     cursor, count, latest = None, 0, since
+    touched: set[str] = set()
     while True:
         data = gql(key, ISSUES_Q, {"after": since, "cursor": cursor})["issues"]
         for issue in data["nodes"]:
             if state.seen(st, "linear", issue["id"] + issue["updatedAt"]):
                 continue
             if issue.get("project"):
-                ensure_project_note(issue["project"]["name"])
-            issue_note(issue)
+                vault.ensure_project(issue["project"]["name"])
+            touched.add(issue_note(issue))
             state.mark_seen(st, "linear", issue["id"] + issue["updatedAt"])
             latest = max(latest or "", issue["updatedAt"])
             count += 1
@@ -123,6 +113,10 @@ def main() -> None:
     if latest and latest != "P7D":
         state.set_cursor(st, "linear", latest)
     state.save(st)
+    if count:  # digest invariant (§6): leave every touched project + dashboard current
+        for slug in sorted(touched):
+            vault.refresh_digest(slug)
+        vault.regenerate_dashboard()
     print(f"Linear: wrote/updated {count} issue notes.")
 
 

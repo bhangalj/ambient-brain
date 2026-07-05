@@ -108,6 +108,8 @@ def main() -> None:
             f"Slack {week}", feedback_lines,
         )
     state.save(st)
+    if digest or feedback_lines:  # dashboard inputs changed (action count, feedback)
+        vault.regenerate_dashboard()
     print(f"Slack: {len(digest)} messages, {n_actions} actions, "
           f"{len(feedback_lines)} feedback items.")
 

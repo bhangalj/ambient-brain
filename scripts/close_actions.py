@@ -41,7 +41,7 @@ def main() -> None:
         print("No action inbox yet.")
         return
     token = config.env("SLACK_USER_TOKEN", required=False)
-    lines = vault.ACTIONS.read_text().splitlines()
+    lines = vault.ACTIONS.read_text(encoding="utf-8").splitlines()
     keep, closed = [], []
     for ln in lines:
         if ln.strip().startswith("- [x]"):
@@ -55,9 +55,10 @@ def main() -> None:
             keep.append(ln)
     if closed:
         stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-        with DONE_LOG.open("a") as f:
+        with DONE_LOG.open("a", encoding="utf-8") as f:
             f.write(f"\n### Closed {stamp}\n" + "\n".join(closed) + "\n")
-        vault.ACTIONS.write_text("\n".join(keep) + "\n")
+        vault.ACTIONS.write_text("\n".join(keep) + "\n", encoding="utf-8")
+        vault.regenerate_dashboard()  # open-action count changed
     print(f"Closed {len(closed)} actions.")
 
 

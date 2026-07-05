@@ -21,11 +21,20 @@ jobs:
         if: ${{ hashFiles('config.yaml') == '' }}
       - name: Clean + wiki-fy transcripts
         run: python scripts/ingest_transcript.py
-        env: { ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }} }
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       - name: Commit cleaned notes
         run: |
           git config user.name "work-brain-bot"
           git config user.email "bot@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet || git commit -m "clean transcripts $(date -u +%F) [skip ci]"
-          git push
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "clean transcripts $(date -u +%F) [skip ci]"
+          git pull --rebase origin main
+          if ! git push origin main; then
+            git pull --rebase origin main
+            git push origin main
+          fi

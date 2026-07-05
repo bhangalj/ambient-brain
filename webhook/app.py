@@ -62,14 +62,21 @@ def commit_to_repo(path: str, content: str, message: str) -> None:
     repo = os.environ["GITHUB_REPO"]
     branch = os.environ.get("GITHUB_BRANCH", "main")
     url = f"https://api.github.com/repos/{repo}/contents/{path}"
-    r = requests.put(url, headers={
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-    }, json={
+    body = {
         "message": message,
         "content": base64.b64encode(content.encode()).decode(),
         "branch": branch,
-    }, timeout=30)
+    }
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+    }
+    r = requests.put(url, headers=headers, json=body, timeout=30)
+    if r.status_code == 409 or r.status_code >= 500:
+        # branch moved under us / transient GitHub error: the Contents-API
+        # equivalent of pull --rebase + retry once (DESIGN §5)
+        time.sleep(2)
+        r = requests.put(url, headers=headers, json=body, timeout=30)
     if r.status_code not in (200, 201):
         raise HTTPException(502, f"GitHub commit failed: {r.status_code} {r.text[:200]}")
 

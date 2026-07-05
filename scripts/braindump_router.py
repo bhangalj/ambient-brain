@@ -36,7 +36,8 @@ DUMP:
 {dump}"""
 
 
-def apply(item: dict) -> str:
+def apply(item: dict, touched: set[str] | None = None) -> str:
+    """Apply one routed item; records touched project slugs into `touched`."""
     kind = item.get("kind")
     text = item.get("text", "").strip()
     target = item.get("target")
@@ -46,8 +47,11 @@ def apply(item: dict) -> str:
         vault.add_action(text, "braindump", {})
         return "→ inbox"
     if kind == "project_update" and target:
+        slug = vault.ensure_project(target)  # real frontmatter + §4 sections
+        if touched is not None:
+            touched.add(slug)
         vault.append_section(
-            vault.VAULT / "02-projects" / vault.slugify(target) / "_project.md",
+            vault.VAULT / "02-projects" / slug / "_project.md",
             "Log", [f"- {datetime.now():%Y-%m-%d} {text}"])
         return f"→ project {target}"
     if kind == "feedback":
@@ -68,15 +72,25 @@ def apply(item: dict) -> str:
 
 
 def main() -> None:
-    dump = Path(sys.argv[1]).read_text() if len(sys.argv) > 1 else sys.stdin.read()
+    dump = (Path(sys.argv[1]).read_text(encoding="utf-8")
+            if len(sys.argv) > 1 else sys.stdin.read())
     if not dump.strip():
         raise SystemExit("Nothing to route (empty input).")
     projects = sorted(p.name for p in (vault.VAULT / "02-projects").iterdir() if p.is_dir())
     model = config.load().get("llm", {}).get("model", "claude-sonnet-5")
     data = llm.complete_json(SYSTEM, PROMPT.format(projects=", ".join(projects) or "none",
                                                    dump=dump), model=model)
+    touched: set[str] = set()
+    applied = 0
     for item in data.get("items", []):
-        print(f"{item.get('kind','?'):15} {apply(item)}")
+        result = apply(item, touched)
+        print(f"{item.get('kind','?'):15} {result}")
+        if result != "skip":
+            applied += 1
+    if applied:  # digest invariant (§6): every write leaves digests + dashboard current
+        for slug in sorted(touched):
+            vault.refresh_digest(slug)
+        vault.regenerate_dashboard()
 
 
 if __name__ == "__main__":

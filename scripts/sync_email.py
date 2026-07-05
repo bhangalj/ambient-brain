@@ -95,6 +95,7 @@ def main() -> None:
             vault.VAULT / "05-feedback" / f"{datetime.now().year}.md",
             f"Email {week}", lines,
         )
+        vault.regenerate_dashboard()  # dashboard inputs changed
     state.save(st)
     print(f"Email: logged {len(lines)} feedback-flagged threads.")
 
