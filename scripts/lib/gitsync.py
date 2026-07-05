@@ -34,6 +34,10 @@ def sync_repo(message: str, cwd: Path = VAULT) -> str:
                 return f"commit-failed: {_why(c)}"
             committed = True
 
+        # anything stranded by an earlier failed push also counts as work to push
+        rev = _git(["rev-list", "--count", "@{u}..HEAD"], cwd)
+        ahead = rev.returncode == 0 and rev.stdout.strip() not in ("", "0")
+
         pull = _git(["pull", "--rebase", "-q"], cwd)
         if pull.returncode != 0:
             _git(["rebase", "--abort"], cwd)  # no-op if no rebase in progress
@@ -53,6 +57,6 @@ def sync_repo(message: str, cwd: Path = VAULT) -> str:
                 state = "committed-not-pushed" if committed else "not-pushed"
                 return f"{state}: push rejected twice ({_why(push)})"
 
-        return "pushed" if committed else "nothing-to-commit"
+        return "pushed" if committed or ahead else "nothing-to-commit"
     except Exception as e:  # noqa: BLE001 — a sync failure must never kill a writer
         return f"error: {e}"

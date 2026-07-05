@@ -74,8 +74,12 @@ def commit_to_repo(path: str, content: str, message: str) -> None:
     r = requests.put(url, headers=headers, json=body, timeout=30)
     if r.status_code == 409 or r.status_code >= 500:
         # branch moved under us / transient GitHub error: the Contents-API
-        # equivalent of pull --rebase + retry once (DESIGN §5)
+        # equivalent of pull --rebase + retry once (DESIGN §5). If the first
+        # attempt actually created the file, the retry needs its sha.
         time.sleep(2)
+        g = requests.get(url, headers=headers, params={"ref": branch}, timeout=30)
+        if g.status_code == 200 and g.json().get("sha"):
+            body["sha"] = g.json()["sha"]
         r = requests.put(url, headers=headers, json=body, timeout=30)
     if r.status_code not in (200, 201):
         raise HTTPException(502, f"GitHub commit failed: {r.status_code} {r.text[:200]}")

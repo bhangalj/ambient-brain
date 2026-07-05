@@ -55,6 +55,7 @@ def main() -> None:
             keep.append(ln)
     if closed:
         stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        DONE_LOG.parent.mkdir(parents=True, exist_ok=True)
         with DONE_LOG.open("a", encoding="utf-8") as f:
             f.write(f"\n### Closed {stamp}\n" + "\n".join(closed) + "\n")
         vault.ACTIONS.write_text("\n".join(keep) + "\n", encoding="utf-8")

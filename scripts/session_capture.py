@@ -26,10 +26,13 @@ def main() -> int:
     except Exception:  # noqa: BLE001
         pass
     try:
-        status = subprocess.run(["git", "status", "--porcelain"], cwd=str(VAULT),
-                                capture_output=True, text=True,
+        status = subprocess.run(["git", "status", "--porcelain", "--branch"],
+                                cwd=str(VAULT), capture_output=True, text=True,
                                 encoding="utf-8", errors="replace")
-        if status.returncode == 0 and not status.stdout.strip():
+        lines = status.stdout.splitlines()
+        dirty = any(not ln.startswith("##") for ln in lines)
+        ahead = bool(lines) and "[ahead" in lines[0]  # stranded unpushed commit
+        if status.returncode == 0 and not dirty and not ahead:
             print("nothing-to-capture")
             return 0
         from lib import gitsync  # noqa: PLC0415 — import after sys.path fix

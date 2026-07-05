@@ -3,14 +3,14 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "python scripts/session_capture.py", "timeout": 60 }
+          { "type": "command", "command": "python -c \"import os,sys,subprocess; d=os.environ.get('CLAUDE_PROJECT_DIR') or '.'; sys.exit(subprocess.call([sys.executable, os.path.join(d,'scripts','session_capture.py')], cwd=d))\"", "timeout": 60 }
         ]
       }
     ],
     "SessionEnd": [
       {
         "hooks": [
-          { "type": "command", "command": "python scripts/session_capture.py", "timeout": 60 }
+          { "type": "command", "command": "python -c \"import os,sys,subprocess; d=os.environ.get('CLAUDE_PROJECT_DIR') or '.'; sys.exit(subprocess.call([sys.executable, os.path.join(d,'scripts','session_capture.py')], cwd=d))\"", "timeout": 60 }
         ]
       }
     ]

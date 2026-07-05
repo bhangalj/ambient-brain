@@ -7,6 +7,7 @@ Report-only in P1 — prints WARN/OK lines and always exits 0.
 from __future__ import annotations
 import subprocess
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 import yaml
@@ -40,6 +41,14 @@ def last_activity(slug: str) -> str:
     return out.stdout.strip()
 
 
+def _stale(stamp: str, active: str) -> bool:
+    """1-day grace: stamps are UTC dates, git %cs is the committer's local date."""
+    try:
+        return date.fromisoformat(active) - date.fromisoformat(stamp) > timedelta(days=1)
+    except ValueError:
+        return stamp < active  # unparseable — fall back to strict compare
+
+
 def main() -> None:
     warns = 0
     notes = sorted(PROJECTS.glob("*/_project.md"))
@@ -51,7 +60,7 @@ def main() -> None:
         if not stamp:
             print(f"WARN {slug}: no digest_updated stamp (last activity {active or 'unknown'})")
             warns += 1
-        elif active and stamp < active:
+        elif active and _stale(stamp, active):
             print(f"WARN {slug}: digest_updated {stamp} older than last activity {active}")
             warns += 1
     if warns:

@@ -151,17 +151,21 @@ def _open_tasks(pdir: Path) -> list[dict]:
     return tasks
 
 
-def _recent_meetings(slug: str, limit: int = 5) -> list[str]:
-    """Titles of the most recent meeting notes whose frontmatter mentions slug."""
+def _recent_meetings(slug: str, limit: int = 5) -> list[tuple[str, str]]:
+    """(file stem, title) of recent meeting notes whose frontmatter links slug.
+
+    Matches the full '[[<slug>/_project' link so 'billing' never picks up
+    'billing-v2' meetings.
+    """
     mdir = VAULT / "03-meetings"
-    hits: list[str] = []
+    hits: list[tuple[str, str]] = []
     if not mdir.is_dir():
         return hits
     for p in sorted(mdir.glob("*.md"), reverse=True):  # date-prefixed names
         meta, _ = split_frontmatter(p.read_text(encoding="utf-8"))
         mentioned = str(meta.get("projects") or meta.get("project") or "")
-        if slug in mentioned:
-            hits.append(str(meta.get("title") or p.stem))
+        if f"[[{slug}/_project" in mentioned:
+            hits.append((p.stem, str(meta.get("title") or p.stem)))
         if len(hits) >= limit:
             break
     return hits
@@ -191,11 +195,11 @@ def _structural_digest(slug: str, meta: dict, tasks: list[dict], log_lines: list
     if decisions:
         out += ["", "**Recent decisions**"] + decisions[-3:]
     if log_lines or done_lines:
-        out += ["", "**Recent activity**"] + log_lines[-5:] + done_lines[-5:]
+        out += ["", "**Recent activity**"] + log_lines + done_lines
     deeper = [str(r) for r in (meta.get("repos") or [])]
     if (VAULT / "02-projects" / slug / "done.md").exists():
         deeper.append(f"[[{slug}/done|done log]]")
-    deeper += [f"[[{m}]]" for m in meetings[:3]]
+    deeper += [f"[[{stem}|{title}]]" for stem, title in meetings[:3]]
     if deeper:
         out += ["", "**Deeper:** " + " · ".join(deeper)]
     return "\n".join(out)
@@ -215,13 +219,14 @@ def refresh_digest(slug: str) -> bool:
             return False
         meta, body = split_frontmatter(note.read_text(encoding="utf-8"))
         tasks = _open_tasks(pdir)
-        log_lines = _bullets(_section(body, "Log"))[-5:]
+        # append_section inserts newest-first, so "recent" is the TOP slice
+        log_lines = _bullets(_section(body, "Log"))[:5]
         decisions = _bullets(_section(body, "Decisions"))
         done = pdir / "done.md"
         done_lines = []
         if done.exists():
             _, done_body = split_frontmatter(done.read_text(encoding="utf-8"))
-            done_lines = _bullets(done_body)[-5:]
+            done_lines = _bullets(done_body)[:5]
         meetings = _recent_meetings(slug)
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -238,7 +243,8 @@ def refresh_digest(slug: str) -> bool:
                     "RECENT LOG:\n" + "\n".join(log_lines),
                     "RECENT DONE:\n" + "\n".join(done_lines),
                     "DECISIONS:\n" + "\n".join(decisions),
-                    "RECENT MEETINGS:\n" + "\n".join(meetings),
+                    "RECENT MEETINGS:\n" + "\n".join(
+                        f"[[{stem}|{title}]]" for stem, title in meetings),
                 ]))
                 system = (
                     "You maintain the '## Current state' digest of a project note in "
@@ -250,6 +256,9 @@ def refresh_digest(slug: str) -> bool:
                 )
                 content = llm.complete(system, context, model=_llm_model(),
                                        max_tokens=700).strip()
+                # a '## ' line in model output would become a section boundary
+                # and break the next replace_section — strip heading markers
+                content = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", content)
             except Exception:  # noqa: BLE001 — LLM failure falls back
                 content = None
         if not content:

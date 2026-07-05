@@ -95,11 +95,12 @@ all write to the same repo without stepping on each other.
 3. **obsidian-git** (the human-side sync mechanism — see below).
 4. **Config**: copy `config.example.yaml` to `config.yaml`, set your Slack
    handle in `search_queries`, tune keyword lists.
-5. **Secrets**: copy `.env.example` to `.env` for local use; add the same
-   values as GitHub Actions secrets for CI. `.env` is read by CI and by scripts
-   in local shells; on Windows PowerShell, set the variables in your session
-   (`$env:ANTHROPIC_API_KEY = "..."`) or use an env loader — there is no
-   `source .env`. Tokens/scopes below.
+5. **Secrets**: `.env.example` lists every key as a reference — nothing loads a
+   `.env` file automatically. Scripts read plain environment variables
+   (`os.environ`), so set them in your shell (PowerShell:
+   `$env:ANTHROPIC_API_KEY = "..."`; bash: `export ANTHROPIC_API_KEY=...` or an
+   env loader of your choice). For CI, add the same keys as GitHub Actions
+   secrets. Tokens/scopes below.
 6. **Claude Code**: merge `.claude/settings.example.json` into your
    `.claude/settings.json`. `/braindump <text>` routes a dictated dump.
 
@@ -121,19 +122,21 @@ Both `Stop` (per turn) and `SessionEnd` (backstop) run the same command:
 {
   "hooks": {
     "Stop": [
-      { "hooks": [ { "type": "command", "command": "python scripts/session_capture.py", "timeout": 60 } ] }
+      { "hooks": [ { "type": "command", "command": "python -c \"import os,sys,subprocess; d=os.environ.get('CLAUDE_PROJECT_DIR') or '.'; sys.exit(subprocess.call([sys.executable, os.path.join(d,'scripts','session_capture.py')], cwd=d))\"", "timeout": 60 } ] }
     ],
     "SessionEnd": [
-      { "hooks": [ { "type": "command", "command": "python scripts/session_capture.py", "timeout": 60 } ] }
+      { "hooks": [ { "type": "command", "command": "python -c \"import os,sys,subprocess; d=os.environ.get('CLAUDE_PROJECT_DIR') or '.'; sys.exit(subprocess.call([sys.executable, os.path.join(d,'scripts','session_capture.py')], cwd=d))\"", "timeout": 60 } ] }
     ]
   }
 }
 ```
 
-The path is relative on purpose: hooks run with the project directory as cwd,
-so it works identically under cmd, PowerShell, and Git Bash on Windows. The
+The `python -c` wrapper resolves `CLAUDE_PROJECT_DIR` *inside Python* on
+purpose: hooks run in the session's current directory (which can drift via
+`cd`), and shell variable syntax differs between cmd, PowerShell, and Git
+Bash — reading the env var in Python works identically under all three. The
 script makes one batched commit per turn (never per-file) and does
-`pull --rebase` before pushing.
+`pull --rebase` before pushing; a turn that touched nothing is a fast no-op.
 
 ### Tokens & scopes
 

@@ -83,8 +83,13 @@ def main() -> None:
     touched: set[str] = set()
     applied = 0
     for item in data.get("items", []):
-        result = apply(item, touched)
-        print(f"{item.get('kind','?'):15} {result}")
+        try:  # one malformed item must not strand earlier writes with stale digests
+            result = apply(item, touched)
+        except Exception as e:  # noqa: BLE001
+            print(f"{'?':15} ! skipped malformed item: {e}")
+            continue
+        kind = item.get("kind", "?") if isinstance(item, dict) else "?"
+        print(f"{kind:15} {result}")
         if result != "skip":
             applied += 1
     if applied:  # digest invariant (§6): every write leaves digests + dashboard current

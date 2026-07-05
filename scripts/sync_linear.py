@@ -26,7 +26,13 @@ query($after: DateTimeOrDuration, $cursor: String) {
   issues(
     first: 50
     after: $cursor
-    filter: { updatedAt: { gt: $after }, assignee: { isMe: { eq: true } } }
+    filter: {
+      updatedAt: { gt: $after }
+      or: [
+        { assignee: { isMe: { eq: true } } }
+        { subscribers: { some: { isMe: { eq: true } } } }
+      ]
+    }
     orderBy: updatedAt
   ) {
     pageInfo { hasNextPage endCursor }
@@ -93,15 +99,17 @@ def main() -> None:
     viewer = gql(key, VIEWER_Q)["viewer"]
     print(f"Linear viewer: {viewer['name']}")
 
-    cursor, count, latest = None, 0, since
+    cursor, count, latest = None, 0, ""  # latest: real timestamps only, never 'P7D'
     touched: set[str] = set()
     while True:
         data = gql(key, ISSUES_Q, {"after": since, "cursor": cursor})["issues"]
         for issue in data["nodes"]:
             if state.seen(st, "linear", issue["id"] + issue["updatedAt"]):
                 continue
-            if issue.get("project"):
-                vault.ensure_project(issue["project"]["name"])
+            # projectless issues land in no-project/ — it needs a _project.md
+            # too, or digest/dashboard/lint silently skip those tasks (§6)
+            vault.ensure_project((issue.get("project") or {}).get("name")
+                                 or "No Project")
             touched.add(issue_note(issue))
             state.mark_seen(st, "linear", issue["id"] + issue["updatedAt"])
             latest = max(latest or "", issue["updatedAt"])
@@ -110,7 +118,7 @@ def main() -> None:
             break
         cursor = data["pageInfo"]["endCursor"]
 
-    if latest and latest != "P7D":
+    if latest:
         state.set_cursor(st, "linear", latest)
     state.save(st)
     if count:  # digest invariant (§6): leave every touched project + dashboard current

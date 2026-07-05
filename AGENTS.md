@@ -77,10 +77,20 @@ source: linear
 id: ENG-123
 title: Fix the thing
 status: In Progress
+state_type: started      # anything but completed/canceled counts as OPEN
+priority: High
 project: "[[my-project/_project|My Project]]"
 url: https://linear.app/...
-date: 2026-07-05
+updated: 2026-07-05T10:00:00.000Z
+completed: null
 ---
+```
+
+Action inbox lines (`00-inbox/actions.md`, auto-created on first action —
+append via `vault.add_action(text, source, meta)` or match this shape):
+
+```
+- [ ] review the DPA draft  (from slack, 2026-07-04) <!-- src:slack channel=C0ABC ts=1720099999.001 -->
 ```
 
 ## Write rules
@@ -104,6 +114,16 @@ the same commit. Use `scripts/lib/vault.py`:
 - `ensure_project(name)` — create the project skeleton if absent
 - `refresh_digest(slug)` — rewrite that project's `## Current state`
 - `regenerate_dashboard()` — rebuild `DASHBOARD.md`
+
+Invoke from the repo root; no config or secrets needed (with
+`ANTHROPIC_API_KEY` set the digest is LLM-written, otherwise structural):
+
+```
+python -c "import sys; sys.path.insert(0,'scripts'); from lib import vault; vault.refresh_digest('my-project'); vault.regenerate_dashboard()"
+```
+
+`00-inbox/actions.md`, `99-meta/sync-state.json`, and `99-meta/actions-done.md`
+don't exist until the first action/sync creates them — missing ≠ broken.
 
 **Batched commits only**: `git add -A` → commit → `pull --rebase` → push.
 The Stop hook does this automatically for Claude Code sessions; use
