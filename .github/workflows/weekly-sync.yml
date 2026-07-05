@@ -1,0 +1,39 @@
+name: weekly-sync
+on:
+  schedule:
+    - cron: "0 13 * * 1"     # Mondays 13:00 UTC
+  workflow_dispatch: {}       # manual "run now" button
+
+permissions:
+  contents: write             # allow the workflow to commit synced notes
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: cp config.example.yaml config.yaml   # or commit your own config.yaml
+        if: ${{ hashFiles('config.yaml') == '' }}
+      - name: Linear
+        run: python scripts/sync_linear.py
+        env: { LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }} }
+      - name: Slack
+        run: python scripts/sync_slack.py
+        env: { SLACK_USER_TOKEN: ${{ secrets.SLACK_USER_TOKEN }} }
+      - name: Email
+        run: python scripts/sync_email.py
+        continue-on-error: true    # email auth optional; don't fail the whole run
+        env:
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      - name: Commit
+        run: |
+          git config user.name "work-brain-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "weekly sync $(date -u +%F)"
+          git push

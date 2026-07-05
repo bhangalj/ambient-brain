@@ -1,0 +1,31 @@
+name: ingest-transcripts
+on:
+  push:
+    paths:
+      - "00-inbox/transcripts/**"        # fires when the webhook commits a new transcript
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    # skip runs triggered by our own cleaning commit (avoids a loop)
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: cp config.example.yaml config.yaml
+        if: ${{ hashFiles('config.yaml') == '' }}
+      - name: Clean + wiki-fy transcripts
+        run: python scripts/ingest_transcript.py
+        env: { ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }} }
+      - name: Commit cleaned notes
+        run: |
+          git config user.name "work-brain-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "clean transcripts $(date -u +%F) [skip ci]"
+          git push
