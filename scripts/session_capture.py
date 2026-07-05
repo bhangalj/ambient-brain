@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Claude Code SessionEnd hook.
+"""Claude Code Stop/SessionEnd hook (§5, §12).
 
-Runs when a Claude Code session closes: it drains any pending transcripts/
-brain-dumps, closes completed actions, then commits + pushes the vault so the
-brain is never stale. Receives hook JSON on stdin (session_id, transcript_path,
-reason) but doesn't require it.
+Runs at the end of every turn: if the vault working tree changed, one batched
+add -> commit -> pull --rebase -> push via lib.gitsync. Never per-file commits,
+no transcript ingest (that moved to CI, §8). Receives hook JSON on stdin but
+tolerates its absence. ALWAYS exits 0 — a failing hook must never block the
+user's Claude Code session.
 
 Wire it up in .claude/settings.json (see .claude/settings.example.json).
 """
@@ -15,35 +16,30 @@ from datetime import datetime
 from pathlib import Path
 
 VAULT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(VAULT / "scripts"))
 
 
-def run(cmd: list[str], **kw) -> int:
-    return subprocess.run(cmd, cwd=VAULT, **kw).returncode
-
-
-def maybe(script: str) -> None:
+def main() -> int:
+    try:  # consume hook payload; unused
+        if not sys.stdin.isatty():
+            sys.stdin.read()
+    except Exception:  # noqa: BLE001
+        pass
     try:
-        run([sys.executable, f"scripts/{script}"], check=False)
+        status = subprocess.run(["git", "status", "--porcelain"], cwd=str(VAULT),
+                                capture_output=True, text=True,
+                                encoding="utf-8", errors="replace")
+        if status.returncode == 0 and not status.stdout.strip():
+            print("nothing-to-capture")
+            return 0
+        from lib import gitsync  # noqa: PLC0415 — import after sys.path fix
+        result = gitsync.sync_repo(
+            f"session capture {datetime.now():%Y-%m-%d %H:%M}", cwd=VAULT)
+        print(f"session-capture: {result}")
     except Exception as e:  # noqa: BLE001
-        print(f"  ! {script}: {e}", file=sys.stderr)
-
-
-def main() -> None:
-    _ = sys.stdin.read()  # consume hook payload; unused for now
-    maybe("ingest_transcript.py")
-    maybe("close_actions.py")
-    # commit + push if anything changed
-    changed = subprocess.run(["git", "status", "--porcelain"], cwd=VAULT,
-                             capture_output=True, text=True).stdout.strip()
-    if changed:
-        run(["git", "add", "-A"])
-        run(["git", "commit", "-q", "-m",
-             f"session capture {datetime.now():%Y-%m-%d %H:%M}"])
-        run(["git", "push", "-q"])
-        print("Vault committed + pushed.")
-    else:
-        print("Nothing to capture.")
+        print(f"session-capture: error ({e})")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

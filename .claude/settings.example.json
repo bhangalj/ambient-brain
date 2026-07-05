@@ -1,9 +1,16 @@
 {
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python scripts/session_capture.py", "timeout": 60 }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [
-          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/scripts/session_capture.py\"" }
+          { "type": "command", "command": "python scripts/session_capture.py", "timeout": 60 }
         ]
       }
     ]

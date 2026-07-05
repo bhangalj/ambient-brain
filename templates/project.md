@@ -2,18 +2,20 @@
 type: project
 name: 
 status: active
+repos: []
+people: []
 linear: 
 owner: "[[me]]"
 created: 
 ---
 # {{name}}
 
-## Goal
+## Current state
 
-## Status
+## How it works
+
+## Decisions
+
+## Ideas / future
 
 ## Log
-
-## Completed
-
-## Docs
