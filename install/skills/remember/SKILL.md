@@ -27,9 +27,17 @@ if you have not this session.
    - meeting → `<vault>/meetings/YYYY-MM-DD-<slug>.md`
    Apply frontmatter + wikilinks + stable kebab slugs; cross-link every
    person/project mentioned.
-4. **Update `<vault>/index.md`:** add/edit the one-line entry for any page
+4. **Maintain `<vault>/tasks.md`** (the open-task working set):
+   - New action item owned by the user → append a line, newest first:
+     `- <task> — [[meetings/YYYY-MM-DD-<slug>|src]] (YYYY-MM-DD)`.
+   - Input reports something finished/obsolete → **delete its line** (never
+     mark or archive; git history is the record).
+   Meeting notes keep the full action-item log for all owners; `tasks.md`
+   holds only the user's currently-open items (plus explicit "waiting on X"
+   lines worth tracking).
+5. **Update `<vault>/index.md`:** add/edit the one-line entry for any page
    created or changed, respecting the cap (≤ ~80 chars).
-5. **Commit + push** from the vault root:
+6. **Commit + push** from the vault root:
    `git -C <vault> add -A && git -C <vault> commit -m "remember: <slug>" && git -C <vault> pull --rebase && git -C <vault> push`
    Retry the push once on rejection.
-6. Report the paths written and the index line(s) added.
+7. Report the paths written and the index line(s) added.

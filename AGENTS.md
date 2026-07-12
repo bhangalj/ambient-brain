@@ -38,6 +38,7 @@ Read in this order; stop as soon as you have enough:
 |---|---|
 | `AGENTS.md` | this file — THE agent entry point |
 | `index.md` | one-line-per-page map of the brain; loaded every session; capped |
+| `tasks.md` | open action items — the ONLY mutable task state; done = delete the line |
 | `people/<slug>.md` | one page per person |
 | `projects/<slug>/_project.md` | one page per project (state + docs hub) |
 | `topics/<slug>.md` | durable concepts, facts, reference, ideas |
@@ -54,6 +55,13 @@ Read in this order; stop as soon as you have enough:
 - **Kebab-case slugs that NEVER change.** Slugs are identity; renaming breaks
   every wikilink and every agent's memory of the vault.
 - **Dates are `YYYY-MM-DD`. Encoding is UTF-8.**
+- **Tasks: log vs state.** Meeting notes are the immutable *log* of action
+  items (all owners, never retro-edited to track completion); `tasks.md` is the
+  mutable *state* — the user's currently-open items only. `/remember` appends
+  new user-owned items and **deletes** finished ones (git history is the
+  archive); `/recall` answers "outstanding tasks" from `tasks.md` alone.
+  Starting empty is fine — declare task bankruptcy explicitly; anything still
+  relevant will resurface.
 
 Entity schemas:
 
