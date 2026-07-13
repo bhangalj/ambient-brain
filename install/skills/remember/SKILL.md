@@ -37,7 +37,14 @@ if you have not this session.
    lines worth tracking).
 5. **Update `<vault>/index.md`:** add/edit the one-line entry for any page
    created or changed, respecting the cap (≤ ~80 chars).
-6. **Commit + push** from the vault root:
-   `git -C <vault> add -A && git -C <vault> commit -m "remember: <slug>" && git -C <vault> pull --rebase && git -C <vault> push`
-   Retry the push once on rejection.
+6. **Auth preflight, then commit + push** from the vault root:
+   - Preflight: `git -C <vault> ls-remote -q origin HEAD` must succeed. If it
+     fails, the repo-local credential helper is missing or the vault owner is
+     not in gh's keyring: run `bash <vault>/bootstrap.sh` (idempotent; re-pins
+     the helper to the remote's owner) and follow any WARN it prints
+     (`gh auth login` as the owner). NEVER `gh auth switch` — it flips global
+     state under parallel sessions.
+   - Then: `git -C <vault> add -A && git -C <vault> commit -m "remember: <slug>" && git -C <vault> pull --rebase && git -C <vault> push`
+     Retry the push once on rejection. If the push stays blocked, keep the
+     local commit, report exactly what to run, and stop — never lose the write.
 7. Report the paths written and the index line(s) added.

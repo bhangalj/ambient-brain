@@ -169,3 +169,17 @@ git remote set-url origin <gitea|codeberg|self-hosted-url>
 
 Self-hosted Gitea/Forgejo keeps every property above; Syncthing (P2P, no vendor)
 works too if you sync the tree and avoid concurrent `.git` writes.
+
+## Git auth on multi-account machines
+
+`gh`'s credential helper serves only the ACTIVE account's token, so a vault push
+from a session where a different GitHub account is active fails with
+"repository not found". The durable fix (applied by `bootstrap.sh` step 3,
+idempotent) is a **repo-local** credential helper in this repo's `.git/config`
+that always answers with the vault owner's token from gh's keyring — the owner
+is parsed from the origin URL, and the owner must be `gh auth login`-ed once on
+the machine. `/remember` and `/lint` preflight with
+`git -C <vault> ls-remote -q origin HEAD` before pushing and point back to
+`bootstrap.sh` on failure. Never repair a push failure with `gh auth switch`:
+it flips global state and races parallel sessions. Non-GitHub or SSH remotes
+skip all of this (the helper is inert there).

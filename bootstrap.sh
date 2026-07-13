@@ -36,6 +36,32 @@ else
   echo "appended ambient-brain snippet to $GLOBAL_MD"
 fi
 
+# 3. Pin vault git auth to the repo owner (idempotent; multi-account machines).
+# The gh credential helper serves only the ACTIVE account's token, so a push from
+# a session where another account is active 404s. A repo-local helper that always
+# pulls the owner's token from gh's keyring makes vault pushes account-agnostic.
+REMOTE_URL="$(git -C "$VAULT_DIR" remote get-url origin 2>/dev/null || true)"
+case "$REMOTE_URL" in
+  https://*github.com/*)
+    OWNER="$(echo "$REMOTE_URL" | sed -E 's#https://([^@/]+@)?github.com/([^/]+)/.*#\2#')"
+    if command -v gh >/dev/null 2>&1; then
+      git -C "$VAULT_DIR" config --local --replace-all credential.helper ''
+      git -C "$VAULT_DIR" config --local --add credential.helper \
+        "!f() { if [ \"\$1\" = get ]; then echo \"username=$OWNER\"; echo \"password=\$(gh auth token --user $OWNER 2>/dev/null)\"; fi; }; f"
+      if gh auth token --user "$OWNER" >/dev/null 2>&1; then
+        echo "vault git auth pinned to '$OWNER' (repo-local credential helper)"
+      else
+        echo "WARN: '$OWNER' not in gh keyring; run: gh auth login (as $OWNER), then re-run bootstrap" >&2
+      fi
+    else
+      echo "WARN: gh CLI not found; vault pushes will use default git credentials" >&2
+    fi
+    ;;
+  *)
+    echo "vault remote is not GitHub-HTTPS; skipping credential-helper pin (SSH/other auth applies)"
+    ;;
+esac
+
 echo ""
 echo "Bootstrap complete. Next:"
 echo "  1. Personalize $VAULT_DIR/people/me.md"

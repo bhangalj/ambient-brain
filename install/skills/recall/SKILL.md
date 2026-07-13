@@ -20,3 +20,5 @@ Vault path = `__VAULT_DIR__` from the "Ambient Brain" block of global
    `topics/acme-fiscal-calendar.md`).
 5. **Never write, never commit.** If the brain is missing something the user
    clearly wants stored, suggest `/remember` — do not write it yourself.
+   Read-only also means no git auth is ever needed here; remote pushes (and
+   their auth preflight) live in `/remember` and `/lint` only.

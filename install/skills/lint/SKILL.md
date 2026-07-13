@@ -39,6 +39,9 @@ Say which mode ran and what the diff base was.
 
 ## Rules
 - **Propose first.** Present findings + proposed edits; apply ONLY on user OK.
-- On confirmation: edit, then
+- On confirmation: edit, then auth-preflight `git -C <vault> ls-remote -q origin HEAD`
+  (on failure run `bash <vault>/bootstrap.sh` to re-pin the repo-local credential
+  helper; never `gh auth switch`), then
   `git -C <vault> add -A && git -C <vault> commit -m "lint: <summary>" && git -C <vault> pull --rebase && git -C <vault> push`.
+  If the push stays blocked, keep the local commit and report the fix command.
 - `/lint` guards the index cap and the never-store rule.
