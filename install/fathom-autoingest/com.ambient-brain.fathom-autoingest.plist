@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Fathom auto-ingest — twice daily (09:30 and 17:00 local), local machine only.
+
+  __VAULT_DIR__ and __HOME__ are interpolated by bootstrap.sh when this is
+  copied into ~/Library/LaunchAgents/ — launchd expands neither ~ nor $HOME, so
+  every path here has to be absolute by the time it lands. Edit this file, then
+  re-run bootstrap.sh; editing the installed copy directly will be overwritten.
+
+  A LaunchAgent (not a cron, not a cloud routine) is the mechanism because the
+  requirement is "only when the laptop is on". launchd fires a missed
+  StartCalendarInterval slot once on wake, so a closed lid DEFERS a run rather
+  than skipping it, and the machine being off costs nothing.
+
+  RunAtLoad is deliberately false: StartCalendarInterval already catches up
+  after sleep or shutdown, so RunAtLoad would only add a surprise ingest every
+  time you log in — including the moment bootstrap.sh installs this.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ambient-brain.fathom-autoingest</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__VAULT_DIR__/install/fathom-autoingest/run.sh</string>
+  </array>
+
+  <!-- launchd starts jobs with a minimal PATH; python3, gh and claude are all
+       outside it. run.sh sets its own PATH too, so this is belt and braces. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__HOME__/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- Twice daily, local time (this was hourly 09:00-19:00 to begin with).
+
+       Hourly bought nothing: the work-list is derived from transcripts on disk,
+       so 9 of 11 daily runs logged "nothing undistilled" and exited. What it
+       cost was conflict surface — every run merges main into the long-lived
+       ingest branch, and the branch's own PR then sits unreviewed while
+       `/remember` keeps moving main underneath it.
+
+       09:30 catches yesterday's late calls before the day starts; 17:00 catches
+       the day's own. A midday run by hand is safe and does NOT double-ingest:
+       `undistilled()` lists transcripts on disk with no note yet, so a
+       hand-run at 13:00 simply leaves the 17:00 run with nothing to do. -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+
+  <key>RunAtLoad</key><false/>
+  <key>KeepAlive</key><false/>
+
+  <!-- Low priority: this must never compete with foreground work. -->
+  <key>ProcessType</key><string>Background</string>
+  <key>Nice</key><integer>5</integer>
+
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/fathom-autoingest.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/fathom-autoingest.err</string>
+</dict>
+</plist>
