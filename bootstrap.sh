@@ -62,6 +62,94 @@ case "$REMOTE_URL" in
     ;;
 esac
 
+# 4. Fathom auto-ingest: LaunchAgent + the SessionStart hook that surfaces it.
+# The vault claims to be portable, so the automation that feeds it has to be
+# installed from the repo rather than living only on one laptop.
+# This whole step is optional: it is skipped when the directory is absent.
+AI_DIR="$VAULT_DIR/install/fathom-autoingest"
+if [ -d "$AI_DIR" ]; then
+  chmod +x "$AI_DIR"/*.sh 2>/dev/null || true
+
+  case "$(uname -s)" in
+    Darwin)
+      LA_DIR="$HOME/Library/LaunchAgents"
+      PLIST_LABEL="com.ambient-brain.fathom-autoingest"
+      mkdir -p "$LA_DIR"
+      sed -e "s#__VAULT_DIR__#$VAULT_DIR#g" -e "s#__HOME__#$HOME#g" \
+        "$AI_DIR/$PLIST_LABEL.plist" >"$LA_DIR/$PLIST_LABEL.plist"
+      # Reload so an edited schedule takes effect. RunAtLoad is false in the
+      # plist, so this does NOT trigger an immediate ingest.
+      launchctl bootout "gui/$(id -u)/$PLIST_LABEL" 2>/dev/null || true
+      if launchctl bootstrap "gui/$(id -u)" "$LA_DIR/$PLIST_LABEL.plist" 2>/dev/null; then
+        echo "fathom auto-ingest LaunchAgent installed + loaded (09:30 + 17:00 local)"
+      else
+        echo "WARN: could not load $PLIST_LABEL; load it with:" >&2
+        echo "      launchctl bootstrap gui/$(id -u) $LA_DIR/$PLIST_LABEL.plist" >&2
+      fi
+      ;;
+    *)
+      echo "not macOS; skipping the fathom auto-ingest LaunchAgent (run.sh still works by hand)"
+      ;;
+  esac
+
+  # SessionStart hook — the only thing that surfaces a pending ingest, so its
+  # absence silently defeats the whole design. Idempotent; backs up first.
+  SETTINGS="$CLAUDE_DIR/settings.json"
+  HOOK_CMD="bash $AI_DIR/pending.sh"
+  if command -v python3 >/dev/null 2>&1; then
+    # `|| true`: bootstrap runs under `set -e`, and this step is a nice-to-have.
+    # A settings.json we cannot parse must not abort the run and swallow the
+    # "Bootstrap complete" instructions below — it warns and moves on.
+    HOOK_CMD="$HOOK_CMD" SETTINGS="$SETTINGS" python3 - <<'PY' || true
+import json, os, shutil, tempfile
+settings, cmd = os.environ["SETTINGS"], os.environ["HOOK_CMD"]
+data = {}
+if os.path.exists(settings):
+    try:
+        with open(settings) as fh:
+            data = json.load(fh)
+    except (ValueError, OSError) as exc:
+        raise SystemExit(f"WARN: {settings} unreadable ({exc}); add the hook by hand: {cmd}")
+    shutil.copy2(settings, settings + ".bak")
+
+# Valid JSON is not the same as the shape we expect; refuse rather than crash
+# with a traceback (or, worse, clobber a settings file we misread).
+def bad(what):
+    raise SystemExit(f"WARN: {settings} has an unexpected {what}; add the hook by hand: {cmd}")
+
+if not isinstance(data, dict):
+    bad("top level (expected an object)")
+hooks = data.setdefault("hooks", {})
+if not isinstance(hooks, dict):
+    bad("'hooks' value (expected an object)")
+groups = hooks.setdefault("SessionStart", [])
+if not isinstance(groups, list):
+    bad("'hooks.SessionStart' value (expected an array)")
+
+present = any(
+    h.get("command") == cmd
+    for g in groups if isinstance(g, dict)
+    for h in g.get("hooks", []) if isinstance(h, dict)
+)
+if present:
+    print("fathom pending-work SessionStart hook already present")
+else:
+    groups.append({"hooks": [{"type": "command", "command": cmd}]})
+    os.makedirs(os.path.dirname(settings) or ".", exist_ok=True)
+    # Write via a temp file + rename: an interrupted write here would leave the
+    # user with no usable global settings at all.
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(settings) or ".", prefix=".settings-")
+    with os.fdopen(fd, "w") as fh:
+        json.dump(data, fh, indent=2)
+        fh.write("\n")
+    os.replace(tmp, settings)
+    print("added fathom pending-work SessionStart hook to " + settings)
+PY
+  else
+    echo "WARN: python3 not found; add a SessionStart hook by hand: $HOOK_CMD" >&2
+  fi
+fi
+
 echo ""
 echo "Bootstrap complete. Next:"
 echo "  1. Personalize $VAULT_DIR/people/me.md"
