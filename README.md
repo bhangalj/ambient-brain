@@ -41,9 +41,27 @@ pulls meeting recordings into the vault twice a day via a LaunchAgent. It
 commits raw transcripts to `main`, distils them into notes and task lines on a
 rolling `fathom-ingest` branch, opens a draft PR, and surfaces what is waiting
 at the start of your next session. Everything else in the template works
-without it — skip it if you are not on macOS or do not use Fathom.
+without it. It is **off by default**: install it with `./bootstrap.sh --with-fathom`.
 
-## Use this template
+## Set up with Claude Code (the easy way)
+
+Give Claude Code this repo's URL and say "set this up". Instructions for the agent:
+
+1. Ask the user for a name for their private vault repo (default `brain`) and
+   confirm `~/brain` does not exist yet (if it does, stop and ask).
+2. Create a **private** copy from this template and clone it:
+   ```bash
+   gh repo create <name> --private --template bhangalj/ambient-brain
+   gh repo clone <name> ~/brain
+   ```
+   If `gh` is not logged in, ask the user to run `! gh auth login` first.
+   If the clone fails straight after creation, wait a few seconds and retry.
+3. Run `cd ~/brain && ./bootstrap.sh` (no flags — Fathom ingest stays off).
+4. Ask the user for their name, role and team, fill in `people/me.md`, then
+   commit and push that one file.
+5. Tell the user to open a **new** Claude Code session and try `/remember` and `/recall`.
+
+## Use this template (by hand)
 
 1. Click **Use this template** → create your own **private** repo (e.g. `brain`).
 2. Clone it and bootstrap:
