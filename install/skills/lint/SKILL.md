@@ -160,6 +160,8 @@ Say which mode ran and what the diff base was.
 
 ## Rules
 - **Propose first.** Present findings + proposed edits; apply ONLY on user OK.
+- **Local-only vault:** if `git -C <vault> remote` prints nothing, skip the
+  preflight, `pull --rebase` and `push` below; stage and commit only.
 - On confirmation: edit, then auth-preflight `git -C <vault> ls-remote -q origin HEAD`
   (on failure run `bash <vault>/bootstrap.sh` to re-pin the repo-local credential
   helper; never `gh auth switch`), then
