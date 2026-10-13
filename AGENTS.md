@@ -327,6 +327,10 @@ mobile connector convenience:
 git remote set-url origin <gitea|codeberg|self-hosted-url>
 ```
 
+**Local-only** is also supported: a vault with no remote at all. `/remember`
+and `/lint` detect this (`git remote` prints nothing) and commit locally
+without pull or push. The trade-off is no off-device copy.
+
 Self-hosted Gitea/Forgejo keeps every property above; Syncthing (P2P, no vendor)
 works too if you sync the tree and avoid concurrent `.git` writes.
 

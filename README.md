@@ -47,18 +47,25 @@ without it. It is **off by default**: install it with `./bootstrap.sh --with-fat
 
 Give Claude Code this repo's URL and say "set this up". Instructions for the agent:
 
-1. Ask the user for a name for their private vault repo (default `brain`) and
-   confirm `~/brain` does not exist yet (if it does, stop and ask).
-2. Create a **private** copy from this template and clone it:
-   ```bash
-   gh repo create <name> --private --template bhangalj/ambient-brain
-   gh repo clone <name> ~/brain
-   ```
-   If `gh` is not logged in, ask the user to run `! gh auth login` first.
-   If the clone fails straight after creation, wait a few seconds and retry.
+1. Confirm `~/brain` does not exist yet (if it does, stop and ask). Ask the
+   user: **private GitHub repo** (off-device backup, readable from claude.ai)
+   or **local only** (no GitHub account needed, no backup)?
+2. Create the vault.
+   - **GitHub repo:** ask for a repo name (default `brain`), then:
+     ```bash
+     gh repo create <name> --private --template bhangalj/ambient-brain
+     gh repo clone <name> ~/brain
+     ```
+     If `gh` is not logged in, ask the user to run `! gh auth login` first.
+     If the clone fails straight after creation, wait a few seconds and retry.
+   - **Local only:** a fresh git repo with no remote:
+     ```bash
+     git clone --depth 1 https://github.com/bhangalj/ambient-brain ~/brain
+     cd ~/brain && rm -rf .git && git init -q && git add -A && git commit -qm "init from ambient-brain template"
+     ```
 3. Run `cd ~/brain && ./bootstrap.sh` (no flags — Fathom ingest stays off).
 4. Ask the user for their name, role and team, fill in `people/me.md`, then
-   commit and push that one file.
+   commit that one file (and push it, if there is a remote).
 5. Tell the user to open a **new** Claude Code session and try `/remember` and `/recall`.
 
 ## Use this template (by hand)

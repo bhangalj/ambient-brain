@@ -51,6 +51,9 @@ fi
 # pulls the owner's token from gh's keyring makes vault pushes account-agnostic.
 REMOTE_URL="$(git -C "$VAULT_DIR" remote get-url origin 2>/dev/null || true)"
 case "$REMOTE_URL" in
+  "")
+    echo "no git remote; local-only vault, skipping git auth pin"
+    ;;
   https://*github.com/*)
     OWNER="$(echo "$REMOTE_URL" | sed -E 's#https://([^@/]+@)?github.com/([^/]+)/.*#\2#')"
     if command -v gh >/dev/null 2>&1; then

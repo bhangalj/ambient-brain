@@ -83,6 +83,9 @@ if you have not this session.
    sharded section stays **generic — no page counts or date ranges that rot**;
    the fuller hook lives in the catalog.
 6. **Auth preflight, then commit + push** from the vault root:
+   - **Local-only vault:** if `git -C <vault> remote` prints nothing, the vault
+     has no remote by design. Skip the preflight, `pull --rebase` and `push`;
+     just stage and commit as below. Never add a remote or suggest one.
    - Preflight: `git -C <vault> ls-remote -q origin HEAD` must succeed. If it
      fails, the repo-local credential helper is missing or the vault owner is
      not in gh's keyring: run `bash <vault>/bootstrap.sh` (idempotent; re-pins
