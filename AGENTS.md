@@ -299,7 +299,7 @@ into `~/.claude/skills/`, (2) appends the `install/claude-md-snippet.md` block
 becomes ambient in every session, (3) pins this repo's git auth to the repo
 owner so a multi-account machine always pushes as the right identity, and
 (4) installs the optional meeting auto-ingest LaunchAgent and its session-start
-hook — skipped automatically when `install/fathom-autoingest/` is absent.
+hook — **only** when run as `./bootstrap.sh --with-fathom`; skipped by default.
 Re-running it is safe.
 
 Manual equivalent (no shell / Windows — symlinks unavailable, copy instead):

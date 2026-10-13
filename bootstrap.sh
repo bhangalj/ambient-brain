@@ -8,6 +8,15 @@ SKILLS_DIR="$CLAUDE_DIR/skills"
 GLOBAL_MD="$CLAUDE_DIR/CLAUDE.md"
 MARKER_BEGIN="<!-- BEGIN ambient-brain -->"
 
+# Optional subsystems are off by default; opt in with flags.
+WITH_FATHOM=0
+for arg in "$@"; do
+  case "$arg" in
+    --with-fathom) WITH_FATHOM=1 ;;
+    *) echo "unknown option: $arg (supported: --with-fathom)" >&2; exit 2 ;;
+  esac
+done
+
 mkdir -p "$SKILLS_DIR"
 
 # 1. Symlink each skill into ~/.claude/skills/ (idempotent)
@@ -65,9 +74,11 @@ esac
 # 4. Fathom auto-ingest: LaunchAgent + the SessionStart hook that surfaces it.
 # The vault claims to be portable, so the automation that feeds it has to be
 # installed from the repo rather than living only on one laptop.
-# This whole step is optional: it is skipped when the directory is absent.
+# Opt-in: runs only with --with-fathom (and only when the directory exists).
 AI_DIR="$VAULT_DIR/install/fathom-autoingest"
-if [ -d "$AI_DIR" ]; then
+if [ "$WITH_FATHOM" = 0 ]; then
+  echo "fathom auto-ingest not installed (opt in with: ./bootstrap.sh --with-fathom)"
+elif [ -d "$AI_DIR" ]; then
   chmod +x "$AI_DIR"/*.sh 2>/dev/null || true
 
   case "$(uname -s)" in

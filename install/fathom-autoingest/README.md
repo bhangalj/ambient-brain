@@ -1,7 +1,7 @@
 # Fathom auto-ingest
 
 Ingests new Fathom recordings into the vault without anyone remembering to run
-`/remember`. Installed by `bootstrap.sh`; runs twice daily (09:30 and 17:00 local) via a macOS
+`/remember`. Installed by `bootstrap.sh --with-fathom` (opt-in); runs twice daily (09:30 and 17:00 local) via a macOS
 LaunchAgent, so it only ever runs while the laptop is on and catches up on wake
 rather than skipping a missed slot.
 
