@@ -18,7 +18,7 @@ no API key. Any agent or harness that can read files can use it.
   OK. (`/lint` skill.)
 
 Optional, Claude Code only: **retro** mines recent session transcripts for repeated corrections and errors, and proposes rule, skill
-and topic edits. Applies only what the user approves. (`/retro` skill, `install/retro/extract.py`.)
+and topic edits. Applies only what the user approves. (`/retro` skill; its extractor is `install/skills/retro/scripts/extract.py`.)
 
 ## Answering "what do I know about X?"
 
@@ -45,7 +45,6 @@ Read in this order; stop as soon as you have enough:
 | `meetings/YYYY-MM-DD-<slug>.md` | cleaned, wiki-linked meeting notes |
 | `sources/` | raw, **immutable** dropped-in material you ingest FROM |
 | `install/` | the skills + the global-CLAUDE.md snippet |
-| `install/retro/` | `extract.py`: mines Claude Code transcripts into a retro digest; the digest stays in `.git/retro/`, never the tree |
 | `bootstrap.sh` | setup glue: links the skills, adds the snippet, pins git auth |
 
 ## Conventions

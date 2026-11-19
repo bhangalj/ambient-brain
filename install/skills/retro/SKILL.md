@@ -19,7 +19,7 @@ harnesses do not write them, so they skip this skill.
    days (`cleanupPeriodDays`).
 2. Create the directory, then run the script:
    `mkdir -p "$(dirname "$(git -C <vault> rev-parse --git-path retro/digest.md)")"`
-   `python3 <vault>/install/retro/extract.py --days <N> --out "$(git -C <vault> rev-parse --git-path retro/digest.md)"`
+   `python3 <vault>/install/skills/retro/scripts/extract.py --days <N> --out "$(git -C <vault> rev-parse --git-path retro/digest.md)"`
    The digest holds private session content. It goes under `.git/`, so git
    never tracks it. Never write it, or any part of it, anywhere in the tree.
 3. Read the digest. If it starts with "Too few signals", tell the user and

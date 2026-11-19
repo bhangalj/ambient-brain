@@ -39,7 +39,7 @@ CAPS = {"corrections": 40, "interrupts": 25, "rejections": 25, "errors": 25, "re
 MAX_BYTES = 60000
 USER_CHARS, ASSIST_CHARS, ERR_CHARS, CMD_CHARS = 400, 300, 240, 160
 CLAUDE_DIR = os.path.expanduser(os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude"))
-AGENTS_MD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "AGENTS.md")
+AGENTS_MD = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "..", "AGENTS.md")
 
 EXTRA_PATTERNS = [
     (r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)", "<private-key>"),

@@ -178,8 +178,8 @@ class ExtractTest(unittest.TestCase):
 
     def test_missing_redaction_list_exits_non_zero(self):
         root = os.path.join(self.tmp.name, "copy")
-        os.makedirs(os.path.join(root, "install", "retro"))
-        script = os.path.join(root, "install", "retro", "extract.py")
+        os.makedirs(os.path.join(root, "install", "skills", "retro", "scripts"))
+        script = os.path.join(root, "install", "skills", "retro", "scripts", "extract.py")
         shutil.copy(SCRIPT, script)
         p = subprocess.run([sys.executable, script, "--projects-dir", self.projects],
                            capture_output=True, text=True)
