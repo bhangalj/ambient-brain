@@ -5,7 +5,7 @@ reads a short index at the start of every session, so it knows who you work
 with, what your projects are and what you decided last month. You tell it to
 remember things, and it files them as linked pages. There is no runtime, no
 database and no API key. Any agent that reads files can use it. Claude Code
-gets three skills and a one-command setup.
+gets four skills and a one-command setup.
 
 ## The three verbs
 
@@ -16,6 +16,13 @@ gets three skills and a one-command setup.
 - **`/lint`**: health-check the vault. It finds contradictions, stale claims,
   orphan pages, missing links, undistilled sources and leaked secrets. It
   proposes fixes and commits only when you say yes.
+
+## Retro (Claude Code only, optional)
+
+`/retro` reads your last week of Claude Code session transcripts. It finds the
+corrections you had to repeat and the errors that keep coming back, and
+proposes edits to `AGENTS.md`, the skills or a topic page. It applies only the
+edits you approve. The digest it reads stays in `.git/retro/`, outside the tree.
 
 ## Layout
 

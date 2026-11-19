@@ -17,6 +17,9 @@ no API key. Any agent or harness that can read files can use it.
 - **lint** — reconcile: contradictions, stale claims, orphans, missing cross-refs, undistilled sources, index-cap. Proposes, commits on
   OK. (`/lint` skill.)
 
+Optional, Claude Code only: **retro** mines recent session transcripts for repeated corrections and errors, and proposes rule, skill
+and topic edits. Applies only what the user approves. (`/retro` skill, `install/retro/extract.py`.)
+
 ## Answering "what do I know about X?"
 
 Read in this order; stop as soon as you have enough:
@@ -42,6 +45,7 @@ Read in this order; stop as soon as you have enough:
 | `meetings/YYYY-MM-DD-<slug>.md` | cleaned, wiki-linked meeting notes |
 | `sources/` | raw, **immutable** dropped-in material you ingest FROM |
 | `install/` | the skills + the global-CLAUDE.md snippet |
+| `install/retro/` | `extract.py`: mines Claude Code transcripts into a retro digest; the digest stays in `.git/retro/`, never the tree |
 | `bootstrap.sh` | setup glue: links the skills, adds the snippet, pins git auth |
 
 ## Conventions
@@ -216,7 +220,7 @@ cd ~/brain && ./bootstrap.sh
 session, and (3) pins this repo's git auth to the repo owner so a multi-account machine always pushes as the right identity. Skills
 run straight from the vault, so a `git pull` updates them. Re-running is safe.
 
-Manual equivalent (no shell / Windows — symlinks unavailable): copy `install/skills/{remember,recall,lint}` into `~/.claude/skills/`
+Manual equivalent (no shell / Windows — symlinks unavailable): copy `install/skills/{remember,recall,lint,retro}` into `~/.claude/skills/`
 and append `install/claude-md-snippet.md` to `~/.claude/CLAUDE.md` by hand, replacing `__VAULT_DIR__` with this repo's absolute path.
 
 ## Using this from other harnesses
