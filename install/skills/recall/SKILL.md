@@ -28,7 +28,16 @@ Vault path = `__VAULT_DIR__` from the "Ambient Brain" block of global
    **sharded** — `/lint` shards any section that outgrows a screen, and its
    `index.md` entry becomes a `[[<section>/_index]]` pointer — open that
    `_index.md` catalog to locate the specific page.
-2. Open the matching page(s) under `people/ projects/ topics/ meetings/`.
+2. Search before you open a page:
+   `python3 -I <vault>/install/skills/recall/scripts/find.py "<terms>" --vault <vault>`
+   (add `--sources` to search `sources/` too). It prints ranked sections as
+   `path:start-end (size) heading chain`, with the matching lines. Use the rarest
+   terms and a slug; narrow when it says hits were not shown. Often the printed
+   lines answer the question.
+   Then open the matching page(s) under `people/ projects/ topics/ meetings/`.
+   Read only what you need with `offset`/`limit`: the section range, or a
+   few lines around the hit lines when the section is long. Read a whole page
+   only when it is under 15 KB or the hits do not answer the question.
 3. Only if the page points deeper, follow wikilinks or read `<vault>/sources/`.
 4. Answer concisely, **citing the file path(s)** used (e.g.
    `topics/acme-fiscal-calendar.md`).

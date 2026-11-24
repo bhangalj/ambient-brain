@@ -20,120 +20,70 @@ git -C <vault> diff --name-only $BASE -- '*.md'             # the deep-check set
 Plus: when a changed page contradicts an unchanged one, pull the unchanged page
 into the set too (follow its wikilinks one hop).
 
-Always full-vault regardless (cheap greps, no file reads): the index-cap,
-`tasks.md`-hygiene, never-store-leaks, orphan-pages,
-and never-distilled-sources checks (named in "## Checks" below).
+Always full-vault regardless: `lint.py` (index cap, frontmatter, broken links,
+orphans, undistilled sources, `tasks.md` rules) and the cheap-grep
+never-store-leaks check (named in "## Checks" below).
 
 `/lint full` (user says "full") → deep-check the entire vault, ignoring BASE.
 Say which mode ran and what the diff base was.
+
+Run `python3 -I <vault>/install/skills/lint/scripts/lint.py --vault <vault>`
+first. It covers the checks with one right answer, full vault, and prints one
+`<CHECK>\t<path[:line]>\t<detail>` line per violation (nothing when clean).
+Turn each line into a finding under the check it belongs to; do not re-check
+what it covers. It also flags frontmatter (`FRONTMATTER`: base keys and the
+per-type keys in AGENTS.md "Entity schemas") and broken wikilinks (`BROKEN_LINK`).
 
 ## Checks (group findings, most-important first)
 1. **Contradictions** — pages asserting incompatible facts.
 2. **Stale claims** — dated statements likely outdated; old frontmatter `updated`.
    Also flag snapshot counts and installed versions (AGENTS.md, "No snapshot
    counts") and propose removing them.
-3. **Orphan pages** — entity pages with no inbound wikilink and no index entry.
-   A line in a section's `_index.md` shard catalog counts as an index entry.
-   When a section is sharded, its pages are catalogued there, not in
-   `index.md`, so grep the shards too before calling a page orphaned. While a
-   section is unsharded, its lines in `index.md` are the entries.
+3. **Orphan pages** — `lint.py` reports them (`ORPHAN`). A link from `index.md`
+   or a shard `_index.md` counts as an index entry.
 4. **Missing cross-refs** — a page names a person/project that has a page but
    isn't wikilinked to it. Scan the **changed set only**: build the entity-name
    list from `people/`+`projects/` slugs and their `name:` frontmatter, then for
    each changed page grep those names appearing as bare text with no enclosing
    `[[…]]`. No single BSD-grep pass does the negative match — grep the bare name,
    then drop the hits already inside a `[[…]]`.
-5. **Never-distilled sources** — files in `sources/` no entity page derives from.
-   **Exclusion sets are MANDATORY; without them this check cries wolf every run.**
-   - **Read every deliberate-skip list.** `sources/SKIPPED.md` covers any file
-     under `sources/`, and a subfolder may carry its own (for example
-     `sources/<feed>/SKIPPED.md`). Anything listed in one of
-     these was consciously not distilled and **must not be reported**. That file
-     documents its own matcher: compare **filename stems**, accepting
-     `<date>/<name>.md`, `<name>.md` and a bare `<name>`. The lint must honour
-     it, or the same file is re-flagged forever — which is exactly what happens
-     to a low-value transcript someone skipped on purpose months ago.
-   - **Infrastructure files are not sources.** Skip `INDEX.md`, `SKIPPED.md`,
-     `.gitkeep`, `.DS_Store`, and anything else that is tooling
-     or a catalog rather than ingested material.
-   - **A file inside a folder is distilled when a page cites that folder** (for
-     example a set of screenshots captured together).
-   Runnable form:
-   ```python
-   import os, re, glob
-   pages = "\n".join(open(p, encoding="utf-8").read() for p in
-                     glob.glob("**/*.md", recursive=True)
-                     if not p.startswith(("sources/", "install/", ".git")))
-   skipped = set()
-   for sk in glob.glob("sources/**/SKIPPED.md", recursive=True) + ["sources/SKIPPED.md"]:
-       if not os.path.exists(sk):
-           continue
-       for line in open(sk):                      # LIST ENTRIES ONLY -- parsing every
-           if not line.lstrip().startswith("- "): # backtick also catches the file's own
-               continue                           # prose ("<name>") and would
-           m = re.search(r"`([^`]+)`", line)      # silently hide real sources
-           if m:
-               skipped.add(os.path.splitext(os.path.basename(m.group(1)))[0])
-   INFRA = {"INDEX", "SKIPPED", ".gitkeep", ".DS_Store"}
-   for s in glob.glob("sources/**/*", recursive=True):
-       if not os.path.isfile(s) or "__pycache__" in s:
-           continue
-       stem = os.path.splitext(os.path.basename(s))[0]
-       if stem in skipped or stem in INFRA or stem.startswith("."):
-           continue
-       d = os.path.dirname(s)
-       folder_cited = d != "sources" and re.search(re.escape(d) + r"/?[\]\)`\s|]", pages)
-       if stem not in pages and s not in pages and not folder_cited:
-           print("UNDISTILLED:", s)
-   ```
+5. **Never-distilled sources** — `lint.py` reports them (`UNDISTILLED`). It
+   honours every `sources/**/SKIPPED.md` list (list entries only, matched on
+   filename stem) and folder citations, and skips infrastructure files.
    **If a source genuinely should not be distilled, the fix is to add it to
    `SKIPPED.md` with a reason and a date.**
-6. **Index-cap violations** — `index.md` lines over the index cap (AGENTS.md,
-   "The index cap"), duplicates, or a section grown past a screen (propose
-   sharding via the `_index` hub pattern documented there). Three refinements:
-   - **Measure characters, not bytes.** Multibyte glyphs (`→ ↔ · €`) inflate a
-     naive BSD `awk length()`; use a UTF-8-aware count — `python3` (`len()` on
-     the rstripped line) is the reliable one on stock macOS (`wc -m` is
-     locale-dependent, `gawk` isn't installed) — so lines that are ≤80
-     *characters* aren't false-flagged.
-   - **`_index.md` catalogs sit one hop deeper**, so the strict ≤80 relaxes there
-     — still one line per page, but keep the fuller hook. The strict cap binds
-     `index.md` only.
-   - **Rotting pointer facts.** Flag a hardcoded page count or date range in an
-     `index.md` (or `_index.md` header) pointer/summary line — it goes stale as
-     pages change; pointers stay generic.
+6. **Index-cap violations** — `lint.py` reports lines over 80 characters
+   (`INDEX_CAP`), duplicates (`INDEX_DUP`) and a hub pointer that holds a count
+   or date range (`INDEX_POINTER`). Judge the rest yourself: a section grown past
+   a screen (propose sharding via the `_index` hub pattern in AGENTS.md), and a
+   count or date range in an `_index.md` header or in any `index.md` line that
+   does not point at an `_index` hub. The strict cap binds `index.md` only;
+   `_index.md` catalogs keep the fuller hook.
 7. **`tasks.md` hygiene** — enforce the horizon convention (AGENTS.md →
-   "Tasks: sections"). Cheap, so run it every lint regardless of the diff base.
-   Flag:
-   - **Stray task lines** outside a heading — any `- ` line before the first
-     `## ` heading, including one wedged inside the header blockquote (this has
-     happened; it silently hides the task from the human eye). Move it to the
-     section it belongs in.
-   - **Section order / unknown headings** — exactly `## Now`, `## Next`,
-     `## Blocked`, `## Later`, `## Personal`, in that order, each at most once;
-     `## Personal` last.
-   - **`## Now` cap** — hard cap of 7 lines. Flag an 8th; propose demoting the
-     lowest-pressure line to `## Next` or deleting it. Also flag a `## Now`
-     line with no real deadline within ~2 weeks and no named person blocked on
-     it — it belongs in `## Next` instead.
-   - **`## Blocked` format** — every line must carry `(waiting on <name>)`.
-     Flag a `## Blocked` line missing it, and flag the inline `(waiting on …)`
-     pattern surfacing in `## Now`, `## Next`, or `## Later` — that line should
-     move to `## Blocked` instead.
+   "Tasks: sections"). `lint.py` reports stray task lines before the first
+   heading (`TASKS_STRAY`), wrong, missing, duplicate or out-of-order headings
+   (`TASKS_HEADINGS`), an 8th `## Now` line (`TASKS_NOW_CAP`), a `## Blocked`
+   line without `(waiting on` (`TASKS_BLOCKED`), `(waiting on` in Now, Next or
+   Later (`TASKS_WAITING`), a capture date that is not a real date
+   (`TASKS_DATE`), and a Next or Later line captured over 21 days ago
+   with no deadline (`TASKS_EXPIRED`; a deadline is `⏰` or "by/before/due/until/
+   target <date>"). For each, propose a fix: move the line, demote the lowest-pressure
+   `## Now` line, or give an expired line a deadline, demote it to `## Later`
+   (from `## Next`) or delete it.
+   Judge the rest yourself:
+   - **`## Now` pressure** — a `## Now` line with no real deadline within ~2
+     weeks and no named person blocked on it belongs in `## Next`.
    - **Mis-domained items** — a personal-life item (home, personal
      finance, health, family, admin; anything sourced from a
      personal-life project or topic page) sitting outside `## Personal`. Domain
      beats shape: a personal *research* or *code* task still belongs in
      `## Personal`. Conversely flag a work item that has drifted into
      `## Personal`.
-   - **Expiry** — a `## Next` or `## Later` line whose trailing capture date is
-     more than 21 days old and carries no deadline. Propose one of: give it a
-     deadline, demote it to `## Later` (from `## Next`), or delete it. Never
-     delete it yourself — this check proposes, the vault owner decides.
    - **Ordering** — `## Now` sorted soonest-deadline-first; `## Next`,
      `## Blocked`, and `## Later` sorted newest-capture-first by the trailing
      `(YYYY-MM-DD)`; `## Personal` unchanged, newest-first. A low-severity
      finding; batch these rather than listing each.
+   Never delete a task yourself — this check proposes, the vault owner decides.
 8. **Never-store leaks** — scan for the secret patterns in the canonical
    redaction list (AGENTS.md, "Never store"); flag loudly. Require a real
    secret-shaped **value** (a live token/key/password) — prose that merely
