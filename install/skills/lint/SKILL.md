@@ -89,6 +89,10 @@ per-type keys in AGENTS.md "Entity schemas") and broken wikilinks (`BROKEN_LINK`
    secret-shaped **value** (a live token/key/password) — prose that merely
    mentions "Bearer" / "token" / "API key" while describing auth is a benign
    false positive; verify the match is an actual credential before flagging.
+9. **GAP flags** — only when the user gives you `GAP:` lines (agents write them
+   per the "Flag gaps" rule in `~/.claude/CLAUDE.md`). Check each against the
+   page it names. A flag is a claim, not a fact: propose its fix only when the
+   vault or the named source proves it.
 
 ## Rules
 - **Propose first.** Present findings + proposed edits; apply ONLY on user OK.
