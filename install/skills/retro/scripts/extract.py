@@ -4,7 +4,8 @@
 Reads <claude dir>/projects/*/*.jsonl (and their subagents) modified in the last
 --days days and writes a compact, redacted markdown digest of the signals worth
 a lesson: user corrections, interrupts, rejected tool calls, grouped tool
-errors and failed-then-retried commands. Prints one JSON line of stats to stderr.
+errors, failed-then-retried commands and repeated review findings. Prints one
+JSON line of stats to stderr.
 The claude dir is $CLAUDE_CONFIG_DIR, default ~/.claude.
 
 The digest holds private session content. Keep it out of the vault tree.
@@ -18,7 +19,8 @@ Claude Code transcript format, as observed (not a published schema):
     plus userFeedback when the user typed a reason;
   - a resumed session copies earlier records into a new file under the same
     uuid, so records are de-duplicated by uuid across files;
-  - a subagent's transcript is <session>/subagents/agent-<id>.jsonl;
+  - a subagent's transcript is <session>/subagents/agent-<id>.jsonl, and its
+    sibling agent-<id>.meta.json names its agentType;
   - a headless run carries entrypoint=sdk-cli.
 
 Usage: extract.py [--days N] [--out PATH] [--projects-dir DIR]
@@ -32,10 +34,13 @@ import re
 import sys
 import time
 
+import review_loops
+
 MAX_DAYS = 30
 MIN_SIGNALS = 5
 LIVE_SECS = 600
-CAPS = {"corrections": 40, "interrupts": 25, "rejections": 25, "errors": 25, "retries": 20}
+CAPS = {"corrections": 40, "interrupts": 25, "rejections": 25, "errors": 25, "retries": 20,
+        "review_loops": 35, "review_blocking": 20}
 MAX_BYTES = 60000
 USER_CHARS, ASSIST_CHARS, ERR_CHARS, CMD_CHARS = 400, 300, 240, 160
 CLAUDE_DIR = os.path.expanduser(os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude"))
@@ -309,6 +314,8 @@ class Extractor:
         self.rejections = []
         self.errors = {}
         self.retries = {}
+        self.reviews = []
+        self.builds = []
 
     def scan(self, path, proj_dir, subagent):
         sid = os.path.basename(path).removesuffix(".jsonl")
@@ -320,6 +327,7 @@ class Extractor:
         bash_hist = []
         awaiting = []
         counted = False
+        first, final, model = None, "", "?"
         try:
             fh = open(path, encoding="utf-8", errors="replace")
         except OSError:
@@ -348,6 +356,8 @@ class Extractor:
                 live = ts[:19] >= self.since_iso and uid not in self.seen
                 if uid:
                     self.seen.add(uid)
+                if live and first is None:
+                    first = ts
                 if live and not counted and not subagent:
                     self.sessions.add(sid)
                     self.projects[project] += 1
@@ -356,11 +366,12 @@ class Extractor:
                 content = (d.get("message") or {}).get("content")
 
                 if t == "assistant":
+                    model = (d.get("message") or {}).get("model") or model
                     for b in content if isinstance(content, list) else []:
                         if not isinstance(b, dict):
                             continue
                         if b.get("type") == "text" and b.get("text", "").strip():
-                            last_assist = b["text"]
+                            last_assist = final = b["text"]
                         elif b.get("type") == "tool_use":
                             name, inp = b.get("name", ""), b.get("input") or {}
                             tools[b.get("id")] = (name, inp)
@@ -400,6 +411,17 @@ class Extractor:
                                                  before=clip(last_assist, ASSIST_CHARS, tail=True)))
                 awaiting = []
                 last_assist = ""
+        if subagent and first:
+            try:
+                with open(path.removesuffix(".jsonl") + ".meta.json", encoding="utf-8") as fh:
+                    agent_type = str(json.load(fh).get("agentType") or "unknown")
+            except (OSError, ValueError, AttributeError):
+                agent_type = "unknown"
+            run = {"session": session, "project": project, "ts": first}
+            if "review" in agent_type.lower():
+                self.reviews.append(dict(run, final=final))
+            else:
+                self.builds.append(dict(run, type=agent_type, model=model.removeprefix("claude-")))
 
     def _tool_result(self, d, b, name, inp, where, bash_hist, awaiting, subagent):
         kind = d.get("toolDenialKind")
@@ -491,6 +513,16 @@ def render(x, since, now, days):
         f"  error: {r['example']['error']}\n  retry: {r['example']['retry_cmd']}"
         for sh, r in rets])
 
+    runs = {}
+    for v in sorted(x.reviews, key=lambda v: v["ts"]):
+        runs.setdefault(v["session"], {"project": v["project"], "session": v["session"], "ts": v["ts"][:16]})
+
+    def in_run(r, subruns):
+        return sorted((v for v in subruns if v["session"] == r["session"]), key=lambda v: v["ts"])
+    loop_items, blocking = review_loops.render(list(runs.values()), x.reviews, x.builds, in_run)
+    sec["review_loops"] = (len(loop_items), loop_items)
+    sec["review_blocking"] = (len(blocking), [f"- {tag} {clip(line, ERR_CHARS)}" for _, tag, line in blocking])
+
     signals = sum(sec[k][0] for k in ("corrections", "interrupts", "rejections", "retries"))
     out = [
         "# Transcript retro digest",
@@ -516,6 +548,8 @@ def render(x, since, now, days):
         "rejections": "Rejected or denied tool calls (silent and \"try now\"-type ones excluded)",
         "errors": "Tool errors (grouped by error shape; non-zero exits with no error text excluded)",
         "retries": "Same command failed, then re-run",
+        "review_loops": "Review findings (subagents whose type names \"review\"; repeat buckets, then one line per session)",
+        "review_blocking": "Review Blocking findings (first line, newest first; [project session round])",
     }
     kept = {k: v[1][:CAPS[k]] for k, v in sec.items()}
     fixed = sum(len(ln.encode()) + 1 for ln in out) + 120 * len(titles)

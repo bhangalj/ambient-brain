@@ -157,6 +157,28 @@ class ExtractTest(unittest.TestCase):
         stats, _ = self.run_extract()
         self.assertEqual(stats["errors"][0], 1)
 
+    def write_agent(self, name, agent_type, lines):
+        self.write_lines(f"sess1/subagents/{name}.jsonl", lines, age_secs=3600)
+        with open(os.path.join(self.projects, "-work-demo", "sess1", "subagents", f"{name}.meta.json"), "w") as fh:
+            json.dump({"agentType": agent_type}, fh)
+
+    def test_review_findings_repeat_buckets_and_rounds(self):
+        findings = ("## Blocking\n- The new helper has one caller; inline it.\n"
+                    "- No test covers the empty input.\n## Nit\n- No test for the log line.")
+        built = say("w0", 2.1, "Built.")
+        built["message"]["model"] = "claude-sonnet-x"
+        self.write_agent("agent-b0", "builder", [json.dumps(built)])
+        self.write_agent("agent-r1", "code-reviewer", [json.dumps(say("v1", 2.0, findings))])
+        self.write_agent("agent-b1", "builder", [json.dumps(say("w1", 1.9, "Fixed."))])
+        self.write_agent("agent-r2", "code-reviewer", [json.dumps(say("v2", 1.8, "## Blocking\n- Still no test for it."))])
+        stats, digest = self.run_extract()
+        self.assertEqual(stats["review_loops"][0], 3)
+        self.assertIn("- repeat: missing test · 2 finding(s) in 1 session(s)", digest)
+        self.assertIn("- repeat: one-caller helper or duplication · 1 finding(s) in 1 session(s)", digest)
+        self.assertIn("reviews 2 · first build builder (sonnet-x) · round 1 B2 S0 N1 · round 2 B1 S0 N0", digest)
+        self.assertEqual(stats["review_blocking"][0], 3)
+        self.assertIn("Still no test for it.", digest)
+
     def test_headless_sdk_cli_session_is_skipped(self):
         self.write_lines("s2.jsonl", [
             json.dumps(dict(prompt("h1", 2, "that's wrong, you headless thing"), entrypoint="sdk-cli"))])
@@ -181,6 +203,7 @@ class ExtractTest(unittest.TestCase):
         os.makedirs(os.path.join(root, "install", "skills", "retro", "scripts"))
         script = os.path.join(root, "install", "skills", "retro", "scripts", "extract.py")
         shutil.copy(SCRIPT, script)
+        shutil.copy(os.path.join(os.path.dirname(SCRIPT), "review_loops.py"), os.path.dirname(script))
         p = subprocess.run([sys.executable, script, "--projects-dir", self.projects],
                            capture_output=True, text=True)
         self.assertNotEqual(p.returncode, 0)

@@ -37,8 +37,18 @@ harnesses do not write them, so they skip this skill.
    - a tool gotcha (an error shape, or a command that failed and was re-run);
    - a skill step that is wrong, missing or unclear;
    - a fact the agent had to be told more than once.
-4. Check the vault first. If a rule already says it, the fix is to make that
-   rule clearer, not to add a second one.
+4. Check the vault first. If a rule already says it, never add a second copy.
+   Make an unclear rule clearer. A clear rule that is still broken needs
+   enforcement: list it as a hook candidate (step 3).
+5. Read the review findings sections. They cover subagents whose type names
+   "review". A `repeat:` bucket in 3 or more sessions is a mistake that repeats
+   across sessions. Buckets and severities are keyword matches, so read the
+   Blocking sample before you trust a bucket. Find the rule that covers it in
+   the build agent's instructions (for example `~/.claude/agents/<name>.md`)
+   or the review-loop rules (a skill or the snippet). If the rule exists
+   and the bucket still repeats, sharpen the build agent's self-check step or
+   the review-loop rules. Never add a second copy. Blocking counts that stay
+   flat after round 2 point at the review-loop rules, not at the build agent.
 
 ## 3. Propose
 
@@ -53,7 +63,27 @@ For each lesson, show the user one proposal:
   `topics/cli-<tool>.md` gotcha).
 
 Keep each edit as small as the lesson. Prefer a sharper line in an existing
-rule to a new section. Write nothing yet.
+rule to a new section.
+
+Also propose at least one **retirement** per run: a rule, gotcha or skill step
+to delete or shorten. Propose it only when the vault proves one of these:
+
+- a hook now enforces the rule, so the text can shrink to one line that names
+  the hook;
+- a later rule supersedes or contradicts it;
+- the same rule is on two pages;
+- it describes a bug, tool or version that the vault records as fixed or gone.
+
+Never retire a safety rail, the never-store rule, or a rule only because
+nobody broke it this week. If nothing meets the bar, show the three closest
+candidates, each with the proof it lacks.
+
+Then list the **hook candidates**: Claude Code PreToolUse or UserPromptSubmit
+hooks that would catch a pattern every time. For each, give the event and
+matcher, what it detects, what it does (block with a message, or add context),
+and the evidence. Write no hook in this run.
+
+Write nothing yet.
 
 ## 4. Apply what the user approves
 
@@ -72,6 +102,7 @@ rule to a new section. Write nothing yet.
 ## 5. Report
 
 - The lessons found, and which the user approved.
+- The retirements proposed, and the hook candidates.
 - The files changed, the branch and the commit.
 - The proposals the user declined, one line each.
 
