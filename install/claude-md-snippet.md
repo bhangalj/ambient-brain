@@ -100,8 +100,7 @@ not a database you must be told to open.
 
 **Flag gaps:** When the vault lacks a fact or a step you need, or has it wrong,
 write one line in your reply: `GAP: <what was missing or wrong, with page path
-if known> | fix: <suggested correction or source>`. I collect these lines, or
-paste them into a later `/lint`, and fix the vault.
+if known> | fix: <suggested correction or source>`. Paste them into a later `/lint`.
 
 **Never store** secrets, credentials, API keys, or regulated PII in the vault
 (see the never-store rule in `AGENTS.md`).

@@ -81,13 +81,6 @@ def test_no_hits(vault):
     assert find("zzzqqq", "--vault", str(vault)).splitlines()[-1].startswith("[find] 0 sections, 0 hits")
 
 
-def test_default_vault_is_home_brain(vault, tmp_path):
-    home = tmp_path / "home"
-    home.mkdir()
-    (home / "brain").symlink_to(vault)
-    assert "topics/gizmo.md" in find("gizmo", home=home)
-
-
 def test_slug_page_outranks_busier_page_with_same_terms(vault):
     write(vault, "people/nora-quist.md", "# Nora Quist\nAE.\n")
     write(vault, "projects/busy/_project.md", "## Log\n" + "Nora Quist said so.\n" * 20)

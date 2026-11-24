@@ -44,11 +44,10 @@ harnesses do not write them, so they skip this skill.
    "review". A `repeat:` bucket in 3 or more sessions is a mistake that repeats
    across sessions. Buckets and severities are keyword matches, so read the
    Blocking sample before you trust a bucket. Find the rule that covers it in
-   the build agent's instructions (for example `~/.claude/agents/<name>.md`)
-   or the review-loop rules (a skill or the snippet). If the rule exists
-   and the bucket still repeats, sharpen the build agent's self-check step or
-   the review-loop rules. Never add a second copy. Blocking counts that stay
-   flat after round 2 point at the review-loop rules, not at the build agent.
+   the review-loop rules (a skill or the snippet). If the rule exists
+   and the bucket still repeats, sharpen the review-loop rules. Never add a
+   second copy. Blocking counts that stay flat after round 2 point at the
+   review-loop rules.
 
 ## 3. Propose
 

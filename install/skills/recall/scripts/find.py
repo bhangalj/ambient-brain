@@ -37,7 +37,7 @@ def sections(lines: list[str], markdown: bool):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("terms")
-    ap.add_argument("--vault", default=str(Path.home() / "brain"))
+    ap.add_argument("--vault", required=True)
     ap.add_argument("--sources", action="store_true")
     ap.add_argument("--max-bytes", type=int, default=6000)
     a = ap.parse_args()
@@ -71,7 +71,8 @@ def main() -> int:
                     hits += len(spans)
             if hits:
                 found.append((-best, -len(matched), -len(in_path), -hits, rel, start, end, chain, f.stat().st_size, hit_lines, lines))
-    found.sort(key=lambda x: (x[:4], [-ord(c) for c in x[4]]))
+    found.sort(key=lambda x: x[4], reverse=True)
+    found.sort(key=lambda x: x[:4])
     out, size, shown = [], 0, 0
     for _, neg_terms, _, neg_hits, rel, start, end, chain, fsize, hit_lines, lines in found:
         block = [f"{rel}:{start}-{end} ({fsize / 1024:.1f} KB) {chain} [{-neg_terms}/{len(terms)} terms, {-neg_hits} hits]"]

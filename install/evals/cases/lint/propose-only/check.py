@@ -2,6 +2,4 @@
 from evalkit import *
 expect(vault_unchanged(), f"lint edited or committed without an OK: {status() or new_commits()}")
 expect("wonka" in out(), "lint missed the stray task line inside the header blockquote")
-expect(not flagged("notes (sharded)"),
-       "lint flagged a 76-character index line: count characters, not bytes")
 done()

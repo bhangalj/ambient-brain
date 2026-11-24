@@ -93,7 +93,7 @@ def task_lines(text, name):
     return [l for l in section(text, name).splitlines() if l.startswith("- ")]
 
 
-CLEARED = ("skip", "not flag", "excluded", "correct", "clean", "under 80", "≤")
+CLEARED = ("skip", "not flag", "excluded", "under 80", "≤")
 
 
 def flagged(token):

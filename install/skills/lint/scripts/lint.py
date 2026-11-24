@@ -5,7 +5,6 @@ import os
 import re
 import sys
 from datetime import date
-from pathlib import Path
 
 ENTITY_DIRS = ("people/", "projects/", "topics/", "meetings/")
 SCHEMA = {"person": ("name",), "project": ("name", "status"), "project-doc": ("project",), "meeting": ("date",), "topic": (), "meta": ()}
@@ -32,7 +31,7 @@ def check_index() -> list[str]:
         if line in seen:
             out.append(f"INDEX_DUP\tindex.md:{n}\tduplicate of an earlier line")
         seen.add(line)
-        if re.search(r"\[\[[^\]]*_index[\]|]", line) and re.search(r"\d", WIKILINK.sub("", line)):
+        if re.search(r"\[\[[^\]]*_index[\]|]", line) and re.search(r"\d+\s+(?:pages|notes|items|entries)|\b\d{4}\b", WIKILINK.sub("", line)):
             out.append(f"INDEX_POINTER\tindex.md:{n}\thub pointer holds a count or date range")
     return out
 
@@ -142,20 +141,20 @@ def check_tasks(today: date) -> list[str]:
         if sec in ("Now", "Next", "Later") and "(waiting on" in item:
             out.append(f"TASKS_WAITING\ttasks.md:{n}\t(waiting on …) in ## {sec}; move it to ## Blocked")
         m = CAPTURE.search(item)
-        if sec in ("Next", "Later") and m and not DEADLINE.search(item):
+        if m:
             try:
                 age = (today - date.fromisoformat(m.group(1))).days
             except ValueError:
                 out.append(f"TASKS_DATE\ttasks.md:{n}\tcapture date is not a real date: {m.group(1)}")
                 continue
-            if age > 21:
+            if sec in ("Next", "Later") and age > 21 and not DEADLINE.search(item):
                 out.append(f"TASKS_EXPIRED\ttasks.md:{n}\t## {sec} line captured {m.group(1)}, {age} days ago, no deadline")
     return out
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--vault", default=str(Path.home() / "brain"))
+    ap.add_argument("--vault", required=True)
     os.chdir(ap.parse_args().vault)
     pages = sorted(p for p in glob.glob("**/*.md", recursive=True) if not p.startswith(("sources/", "install/")))
     entities = [p for p in pages if p.startswith(ENTITY_DIRS)]

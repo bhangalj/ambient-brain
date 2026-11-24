@@ -149,7 +149,7 @@ def main():
     ap.add_argument("--timeout", type=int, default=900, help="seconds per run")
     ap.add_argument("--keep", action="store_true",
                     help="keep temp dirs of passing runs too (failing ones are always kept)")
-    ap.add_argument("--real-vault", default=os.path.expanduser("~/brain"),
+    ap.add_argument("--real-vault", default=REPO,
                     help="vault that must stay untouched; warn if it changes")
     args = ap.parse_args()
 

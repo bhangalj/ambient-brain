@@ -40,6 +40,12 @@ def test_index_hub_pointer_with_date_range_fires(vault, lint):
     assert checks(lint(vault)[1]) == ["INDEX_POINTER"]
 
 
+def test_index_hub_pointer_with_quarter_label_is_not_flagged(vault, lint):
+    write(vault, "index.md", (vault / "index.md").read_text(encoding="utf-8")
+          .replace("colleagues, one line each (sharded)", "Q4 plan (sharded)"))
+    assert lint(vault) == (0, [])
+
+
 def test_frontmatter_missing_base_keys_fires(vault, lint):
     write(vault, "topics/beta.md", "---\ntype: topic\n---\nlinked from [[topics/alpha]]\n")
     write(vault, "topics/gamma.md", "no frontmatter at all [[topics/beta]]\n")
@@ -203,3 +209,8 @@ def test_tasks_expiry_quiet_for_other_deadline_forms(vault, lint):
 def test_tasks_impossible_capture_date_is_reported(vault, lint):
     write(vault, "tasks.md", tasks(next_=["- Bad date (2026-02-30)"]))
     assert lint(vault)[1] == [["TASKS_DATE", "tasks.md:13", "capture date is not a real date: 2026-02-30"]]
+
+
+def test_tasks_impossible_capture_date_under_now_is_reported(vault, lint):
+    write(vault, "tasks.md", tasks(now=["- Bad date (2026-02-30)"]))
+    assert lint(vault)[1] == [["TASKS_DATE", "tasks.md:10", "capture date is not a real date: 2026-02-30"]]

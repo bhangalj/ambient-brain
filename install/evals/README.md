@@ -39,7 +39,7 @@ The temp dir holds the vault, `agent-stdout.txt` and `agent-stderr.txt`.
 4. Send the prompt: "read `<skill>/SKILL.md`, use only this vault, the request is …".
 5. Run `check.py`. It prints one line per failure.
 
-The runner warns if `~/brain` changes during a run. Agents that load a global config
+The runner warns if this checkout changes during a run. Agents that load a global config
 (for example `~/.claude/CLAUDE.md`) know the real vault path. The prompt overrides it,
 and the warning catches a run that ignores the override.
 
