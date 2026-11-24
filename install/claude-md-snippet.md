@@ -98,6 +98,10 @@ person, project, past decision, or preference — consult the index above and re
 the relevant entity page before answering. Treat it as memory you already have,
 not a database you must be told to open.
 
+**Flag gaps:** When the vault lacks a fact or a step you need, or has it wrong,
+write one line in your reply: `GAP: <what was missing or wrong, with page path
+if known> | fix: <suggested correction or source>`. Paste them into a later `/lint`.
+
 **Never store** secrets, credentials, API keys, or regulated PII in the vault
 (see the never-store rule in `AGENTS.md`).
 <!-- END ambient-brain -->

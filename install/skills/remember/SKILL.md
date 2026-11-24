@@ -45,8 +45,10 @@ Read the ONE reference file that matches the input. The first match in this
 list wins. Do every step in it, then come back to step 4. The `references/`
 folder sits beside this SKILL.md, not in the vault.
 
+- Draft-vs-sent pair (the owner edited an agent draft before sending it) →
+  `references/draft-vs-sent.md`
 - Pasted transcript or long text → `references/transcript.md`
-- File path (PDF, DOCX, PPTX, XLSX, image) or URL → `references/file-or-url.md`.
+- File path (PDF, DOCX, PPTX, XLSX, image) or URL → `references/file-or-url.md`
 - Something the user must do, has finished, or waits on → `references/task-change.md`
 - Short fact, or a person or project update → `references/fact.md`
 
