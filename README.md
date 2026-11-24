@@ -33,6 +33,7 @@ edits you approve. The digest it reads stays in `.git/retro/`, outside the tree.
 | `people/` `projects/` `topics/` `meetings/` | one page per entity |
 | `sources/` | raw, immutable material the pages were distilled from |
 | `install/` | the skills and the global `CLAUDE.md` snippet |
+| `install/evals/` | evals for the skills: run any CLI agent, graded by plain checks |
 | `bootstrap.sh` | setup: links the skills, adds the snippet, pins git auth |
 | `AGENTS.md` | the full read/write contract and conventions |
 

@@ -28,8 +28,8 @@ Vault path = `__VAULT_DIR__` from the "Ambient Brain" block of global
    **sharded** — `/lint` shards any section that outgrows a screen, and its
    `index.md` entry becomes a `[[<section>/_index]]` pointer — open that
    `_index.md` catalog to locate the specific page.
-2. Search before you open a page:
-   `python3 -I <vault>/install/skills/recall/scripts/find.py "<terms>" --vault <vault>`
+2. Search before you open a page. `scripts/` sits beside this SKILL.md:
+   `python3 -I <this skill's folder>/scripts/find.py "<terms>" --vault <vault>`
    (add `--sources` to search `sources/` too). It prints ranked sections as
    `path:start-end (size) heading chain`, with the matching lines. Use the rarest
    terms and a slug; narrow when it says hits were not shown. Often the printed

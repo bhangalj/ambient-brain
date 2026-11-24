@@ -27,8 +27,9 @@ never-store-leaks check (named in "## Checks" below).
 `/lint full` (user says "full") → deep-check the entire vault, ignoring BASE.
 Say which mode ran and what the diff base was.
 
-Run `python3 -I <vault>/install/skills/lint/scripts/lint.py --vault <vault>`
-first. It covers the checks with one right answer, full vault, and prints one
+Run `python3 -I <this skill's folder>/scripts/lint.py --vault <vault>` first
+(`scripts/` sits beside this SKILL.md). It covers the checks with one right
+answer, full vault, and prints one
 `<CHECK>\t<path[:line]>\t<detail>` line per violation (nothing when clean).
 Turn each line into a finding under the check it belongs to; do not re-check
 what it covers. It also flags frontmatter (`FRONTMATTER`: base keys and the

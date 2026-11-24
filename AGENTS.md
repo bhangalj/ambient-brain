@@ -45,6 +45,7 @@ Read in this order; stop as soon as you have enough:
 | `meetings/YYYY-MM-DD-<slug>.md` | cleaned, wiki-linked meeting notes |
 | `sources/` | raw, **immutable** dropped-in material you ingest FROM |
 | `install/` | the skills + the global-CLAUDE.md snippet |
+| `install/evals/` | model-agnostic evals for `remember`/`recall`/`lint`: any agent CLI, deterministic `check.py` grading |
 | `bootstrap.sh` | setup glue: links the skills, adds the snippet, pins git auth |
 
 ## Conventions
